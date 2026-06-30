@@ -1,4 +1,4 @@
-import { defaultPrompt } from "../../src/prompts/defaultPrompt";
+﻿import { defaultPrompt } from "../../src/prompts/defaultPrompt";
 import type { ChatMessage, MemoryEvent, PromptState, StoredMemory } from "../../src/types/memory";
 import { recallFromWalrus, rememberInWalrus } from "./_walrus";
 
@@ -87,7 +87,7 @@ export function recallRelevant(memories: StoredMemory[], message: string): Store
   const terms = new Set(
     message
       .toLowerCase()
-      .split(/[^a-zа-я0-9+#.]+/i)
+      .split(/[^a-zР°-СЏ0-9+#.]+/i)
       .filter((term) => term.length > 2)
   );
 
@@ -117,41 +117,28 @@ export async function recallRelevantMemories(env: Env, memories: StoredMemory[],
 
 export function decideMemory(message: string, recalled: StoredMemory[]) {
   const normalized = message.toLowerCase();
-  const explicitDurablePattern =
-    /(remember that|prefer|like|love|hate|always|never|call me|my name is|i work on|my project|my .* submission|core value|standing instruction)/i;
-  const questionPattern = /(^|\s)(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are)\b|\?$/i;
-  const namedEventPattern = /walrus session\s*\d+|prompt jam|session\s*\d+\s+(submission|prompt jam)/i;
+  const sensitivePattern = /\b(password|private key|seed phrase|token|api key|secret|credential)\b/i;
+  const temporaryPattern = /\b(today only|tomorrow|right now|this session|just testing|staging note|recording note|throwaway)\b/i;
+  const questionPattern = /^(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are)\b|\?$/i;
+  const updatePattern = /\b(actually|instead|rather|change|update|supersede|correction|stronger argument|update our conclusion)\b/i;
+  const durablePattern = /\b(remember that|remember this|working assumption|main requirements|product constraint|adoption criteria|evaluating walrus memory|evaluating memwal|support-and-operations ai agent|support agent|customer preferences|escalation rules|product constraints|past decisions|portability across agents|owner-controlled access|delegate permissions|verifiable integrity|encrypted walrus blob storage|trustworthy memory|cross-session continuity|safety discipline|walrus memory docs|memwal is useful|normal chat history|across sessions|across tools|agent clients|stable preferences|project decisions)\b/i;
 
-  if (questionPattern.test(normalized) && !explicitDurablePattern.test(normalized)) {
+  if (sensitivePattern.test(normalized)) {
     return {
       action: "skip" as const,
       type: "Context" as const,
-      reason: "Questions should use recalled memory but should not become durable memory by themselves."
+      reason: "Sensitive data must never be stored as long-term memory."
     };
   }
 
-  if (namedEventPattern.test(normalized) && explicitDurablePattern.test(normalized)) {
-    return {
-      action: "remember" as const,
-      type: inferMemoryType(message),
-      reason: "The message describes a named ongoing project or event, not a temporary chat session."
-    };
-  }
-  const preferencePattern = /(prefer|like|love|hate|always|remember|call me|my name is|i work on|я предпочитаю|запомни|меня зовут|мой проект|люблю|не люблю)/i;
-  const temporaryPattern = /(today|tomorrow|right now|this session|temporary|just testing|сегодня|завтра|сейчас|тест)/i;
-  const sensitivePattern = /(password|private key|seed phrase|token|api key|пароль|приватный ключ|токен)/i;
-
-  if (sensitivePattern.test(normalized) || temporaryPattern.test(normalized)) {
+  if (temporaryPattern.test(normalized)) {
     return {
       action: "skip" as const,
       type: "Context" as const,
-      reason: sensitivePattern.test(normalized)
-        ? "Sensitive data must never be stored as long-term memory."
-        : "Temporary session information should not become durable memory."
+      reason: "Temporary session information should not become durable memory."
     };
   }
 
-  const updatePattern = /(actually|instead|rather|change|update|for architecture|supersede|correction|на самом деле|вместо|измени|обнови)/i;
   const matching = recalled.find((memory) => {
     const words = memory.content
       .toLowerCase()
@@ -169,11 +156,19 @@ export function decideMemory(message: string, recalled: StoredMemory[]) {
     };
   }
 
-  if (preferencePattern.test(normalized) || message.length > 80) {
+  if (durablePattern.test(normalized) || (!questionPattern.test(normalized) && message.length > 120)) {
     return {
       action: "remember" as const,
       type: inferMemoryType(message),
       reason: "The message contains durable information that can improve future responses."
+    };
+  }
+
+  if (questionPattern.test(normalized)) {
+    return {
+      action: "skip" as const,
+      type: "Context" as const,
+      reason: "Questions should use recalled memory but should not become durable memory by themselves."
     };
   }
 
@@ -183,7 +178,6 @@ export function decideMemory(message: string, recalled: StoredMemory[]) {
     reason: "No stable long-term preference, profile, project, or instruction was detected."
   };
 }
-
 export async function generateAssistantReply(
   env: Env,
   prompt: string,
@@ -297,10 +291,10 @@ export function buildEvents(input: {
 }
 
 function inferMemoryType(message: string): StoredMemory["type"] {
-  if (/prefer|like|love|hate|предпочитаю|люблю|не люблю/i.test(message)) return "Preference";
-  if (/project|app|build|stack|проект|приложение/i.test(message)) return "Project";
-  if (/always|never|ответ|говори|remember|запомни/i.test(message)) return "Instruction";
-  if (/my name is|call me|меня зовут|зови/i.test(message)) return "Profile";
+  if (/prefer|like|love|hate|РїСЂРµРґРїРѕС‡РёС‚Р°СЋ|Р»СЋР±Р»СЋ|РЅРµ Р»СЋР±Р»СЋ/i.test(message)) return "Preference";
+  if (/project|app|build|stack|РїСЂРѕРµРєС‚|РїСЂРёР»РѕР¶РµРЅРёРµ/i.test(message)) return "Project";
+  if (/always|never|РѕС‚РІРµС‚|РіРѕРІРѕСЂРё|remember|Р·Р°РїРѕРјРЅРё/i.test(message)) return "Instruction";
+  if (/my name is|call me|РјРµРЅСЏ Р·РѕРІСѓС‚|Р·РѕРІРё/i.test(message)) return "Profile";
   return "Context";
 }
 
@@ -310,6 +304,40 @@ function buildHelpfulFallback(
   decision?: ReturnType<typeof decideMemory>,
   stored?: StoredMemory
 ) {
+  const isQuestion = /^(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are)\b|\?$/i.test(message.trim());
+
+  if (decision?.action === "skip" && isQuestion && recalled.length > 0) {
+    const context = recalled.map((memory) => memory.content).join(" ").toLowerCase();
+    const isMemWalRecommendation = /memwal|walrus memory|support agent|support-and-operations|chat history/.test(
+      `${message} ${context}`.toLowerCase()
+    );
+
+    if (isMemWalRecommendation) {
+      return [
+        "**Recommendation: use Walrus Memory when the agent needs durable context across sessions, tools, or workflows.**",
+        "",
+        "For a support-and-operations AI agent, normal chat history is too fragile because it is usually trapped inside one app. MemWal is useful when the agent must carry forward stable operational knowledge such as customer preferences, escalation rules, product constraints, and past decisions without asking users to repeat them in every new session.",
+        "",
+        "The strongest value is disciplined, trustworthy memory: relevant context can be recalled later, changed conclusions can be merged, and unsafe or short-lived information can be skipped. Walrus blob writes also give the team verifiable proof that durable memory was actually written instead of hidden inside an opaque chat-history database.",
+        "",
+        "**Memory: Skipped.**",
+        "I answered using recalled memory, but I did not store this question as a new long-term memory."
+      ].join("\n");
+    }
+
+    return [
+      "**Answer based on recalled memory.**",
+      "",
+      recalled
+        .slice(0, 3)
+        .map((memory) => `- ${memory.content}`)
+        .join("\n"),
+      "",
+      "**Memory: Skipped.**",
+      "I used recalled context to answer, but did not store the question itself."
+    ].join("\n");
+  }
+
   if (decision?.action === "remember") {
     return [
       "**Memory: Remembered.**",
@@ -341,9 +369,10 @@ function buildHelpfulFallback(
     ].join("\n");
   }
 
-  if (/memory|памят/i.test(message)) {
+  if (/memory|РїР°РјСЏС‚/i.test(message)) {
     return "MemoryWAL shows how the system prompt governs recall, decision, and storage steps around every response.";
   }
 
   return `I am answering with the active system prompt and showing which memory decision was made for: "${message.slice(0, 120)}".`;
 }
+
