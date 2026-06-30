@@ -117,6 +117,26 @@ export async function recallRelevantMemories(env: Env, memories: StoredMemory[],
 
 export function decideMemory(message: string, recalled: StoredMemory[]) {
   const normalized = message.toLowerCase();
+  const explicitDurablePattern =
+    /(remember that|prefer|like|love|hate|always|never|call me|my name is|i work on|my project|my .* submission|core value|standing instruction)/i;
+  const questionPattern = /(^|\s)(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are)\b|\?$/i;
+  const namedEventPattern = /walrus session\s*\d+|prompt jam|session\s*\d+\s+(submission|prompt jam)/i;
+
+  if (questionPattern.test(normalized) && !explicitDurablePattern.test(normalized)) {
+    return {
+      action: "skip" as const,
+      type: "Context" as const,
+      reason: "Questions should use recalled memory but should not become durable memory by themselves."
+    };
+  }
+
+  if (namedEventPattern.test(normalized) && explicitDurablePattern.test(normalized)) {
+    return {
+      action: "remember" as const,
+      type: inferMemoryType(message),
+      reason: "The message describes a named ongoing project or event, not a temporary chat session."
+    };
+  }
   const preferencePattern = /(prefer|like|love|hate|always|remember|call me|my name is|i work on|я предпочитаю|запомни|меня зовут|мой проект|люблю|не люблю)/i;
   const temporaryPattern = /(today|tomorrow|right now|this session|temporary|just testing|сегодня|завтра|сейчас|тест)/i;
   const sensitivePattern = /(password|private key|seed phrase|token|api key|пароль|приватный ключ|токен)/i;
