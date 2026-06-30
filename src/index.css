@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 34% 6%;
+  --foreground: 198 28% 94%;
+  --card: 219 29% 9%;
+  --card-foreground: 198 28% 94%;
+  --muted: 220 18% 14%;
+  --muted-foreground: 203 16% 68%;
+  --primary: 190 95% 48%;
+  --primary-foreground: 222 47% 7%;
+  --border: 205 23% 18%;
+  --input: 205 23% 18%;
+  --ring: 190 95% 48%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(34, 211, 238, 0.14), transparent 30%),
+    radial-gradient(circle at 84% 8%, rgba(59, 130, 246, 0.12), transparent 32%),
+    linear-gradient(135deg, #07111f 0%, #05070d 48%, #06151a 100%);
+  color: hsl(var(--foreground));
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.32);
+}
+
+.glass {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(8, 15, 28, 0.7);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+}

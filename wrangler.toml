@@ -1,0 +1,7 @@
+name = "memorywal"
+compatibility_date = "2025-12-18"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[vars]
+APP_NAME = "MemoryWAL"

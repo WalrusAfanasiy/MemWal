@@ -1,0 +1,5 @@
+MEMWAL_PRIVATE_KEY=replace-with-your-delegate-private-key
+MEMWAL_ACCOUNT_ID=0xc8c9c1c3fd650b8e3db93afbef7ea14be0f2f821b68da7a76cc81bbf78a2ce87
+MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
+MEMWAL_NAMESPACE=memorywal
+OPENAI_API_KEY=replace-with-your-openai-api-key
