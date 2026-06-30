@@ -119,9 +119,14 @@ export function decideMemory(message: string, recalled: StoredMemory[]) {
   const normalized = message.toLowerCase();
   const sensitivePattern = /\b(password|private key|seed phrase|token|api key|secret|credential)\b/i;
   const temporaryPattern = /\b(today only|tomorrow|right now|this session|just testing|staging note|recording note|throwaway)\b/i;
-  const questionPattern = /^(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are)\b|\?$/i;
+  const questionPattern =
+    /^(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are|based on|explain whether|give a recommendation|summarize why)\b|\?$/i;
+  const answerRequestPattern = /^(based on what you remember|based on our previous|explain whether|give a recommendation|summarize why)/i;
   const updatePattern = /\b(actually|instead|rather|change|update|supersede|correction|stronger argument|update our conclusion)\b/i;
   const durablePattern = /\b(remember that|remember this|working assumption|main requirements|product constraint|adoption criteria|evaluating walrus memory|evaluating memwal|support-and-operations ai agent|support agent|customer preferences|escalation rules|product constraints|past decisions|portability across agents|owner-controlled access|delegate permissions|verifiable integrity|encrypted walrus blob storage|trustworthy memory|cross-session continuity|safety discipline|walrus memory docs|memwal is useful|normal chat history|across sessions|across tools|agent clients|stable preferences|project decisions)\b/i;
+  const lowValueNoisePattern =
+    /\b(pasta|restaurant|paperback book|book on the way home|bought a book|played games|play games|clear my head|nothing to do with|has nothing to do with|temporary personal detail)\b/i;
+  const passingEmotionPattern = /\b(tired|annoyed|frustrated|angry|upset|stressed|hard to reason about|little hard to reason|slightly annoyed)\b/i;
 
   if (sensitivePattern.test(normalized)) {
     return {
@@ -136,6 +141,30 @@ export function decideMemory(message: string, recalled: StoredMemory[]) {
       action: "skip" as const,
       type: "Context" as const,
       reason: "Temporary session information should not become durable memory."
+    };
+  }
+
+  if (lowValueNoisePattern.test(normalized)) {
+    return {
+      action: "skip" as const,
+      type: "Context" as const,
+      reason: "Low-value personal details unrelated to the durable project should not become long-term memory."
+    };
+  }
+
+  if (answerRequestPattern.test(normalized)) {
+    return {
+      action: "skip" as const,
+      type: "Context" as const,
+      reason: "This is a request to use recalled memory for an answer, not a new durable fact to store."
+    };
+  }
+
+  if (passingEmotionPattern.test(normalized)) {
+    return {
+      action: "skip" as const,
+      type: "Context" as const,
+      reason: "Passing emotions or session mood should not become durable memory."
     };
   }
 
@@ -291,6 +320,7 @@ export function buildEvents(input: {
 }
 
 function inferMemoryType(message: string): StoredMemory["type"] {
+  if (/memwal|walrus memory|support agent|agent setup|delegated keys|owner account|walrus blob|semantic recall|access control|production agent/i.test(message)) return "Project";
   if (/prefer|like|love|hate|РїСЂРµРґРїРѕС‡РёС‚Р°СЋ|Р»СЋР±Р»СЋ|РЅРµ Р»СЋР±Р»СЋ/i.test(message)) return "Preference";
   if (/project|app|build|stack|РїСЂРѕРµРєС‚|РїСЂРёР»РѕР¶РµРЅРёРµ/i.test(message)) return "Project";
   if (/always|never|РѕС‚РІРµС‚|РіРѕРІРѕСЂРё|remember|Р·Р°РїРѕРјРЅРё/i.test(message)) return "Instruction";
@@ -304,7 +334,10 @@ function buildHelpfulFallback(
   decision?: ReturnType<typeof decideMemory>,
   stored?: StoredMemory
 ) {
-  const isQuestion = /^(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are)\b|\?$/i.test(message.trim());
+  const isQuestion =
+    /^(what|how|why|when|where|who|which|should|can|could|would|do|does|did|is|are|based on|explain whether|give a recommendation|summarize why)\b|\?$/i.test(
+      message.trim()
+    );
 
   if (decision?.action === "skip" && isQuestion && recalled.length > 0) {
     const context = recalled.map((memory) => memory.content).join(" ").toLowerCase();
